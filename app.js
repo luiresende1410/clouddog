@@ -374,10 +374,9 @@ function render() {
     svg.setAttribute('height', totalHeight);
     chartContainer.style.minHeight = (totalHeight + 100) + 'px';
 
-    // Limpar paths SVG (manter defs)
-    var existingPaths = svg.querySelectorAll('path');
-    for (var i = 0; i < existingPaths.length; i++) {
-        svg.removeChild(existingPaths[i]);
+    // Limpar SVG
+    while (svg.firstChild) {
+        svg.removeChild(svg.firstChild);
     }
 
     // Renderizar nos
@@ -403,7 +402,7 @@ function render() {
         container.appendChild(div);
     }
 
-    // Desenhar linhas curvas (paths)
+    // Desenhar conectores estilo organograma (linhas ortogonais)
     var cardElements = container.querySelectorAll('.node-card');
     var cardMap = {};
     for (var i = 0; i < cardElements.length; i++) {
@@ -411,27 +410,90 @@ function render() {
         cardMap[cardId] = cardElements[i];
     }
 
+    // Agrupar filhos por pai
+    var childrenByParent = {};
     for (var i = 0; i < keys.length; i++) {
         var id = keys[i];
         var node = nodes[id];
         if (!node.parent || node.parent === '') continue;
+        if (!childrenByParent[node.parent]) childrenByParent[node.parent] = [];
+        childrenByParent[node.parent].push(id);
+    }
 
-        var parentEl = cardMap[node.parent];
-        var childEl = cardMap[id];
-        if (!parentEl || !childEl) continue;
+    // Para cada pai, desenhar conector em arvore
+    var parentIds = Object.keys(childrenByParent);
+    for (var p = 0; p < parentIds.length; p++) {
+        var parentId = parentIds[p];
+        var children = childrenByParent[parentId];
+        var parentEl = cardMap[parentId];
+        if (!parentEl) continue;
 
-        var x1 = parentEl.offsetLeft + parentEl.offsetWidth / 2;
-        var y1 = parentEl.offsetTop + parentEl.offsetHeight;
-        var x2 = childEl.offsetLeft + childEl.offsetWidth / 2;
-        var y2 = childEl.offsetTop;
+        var px = parentEl.offsetLeft + parentEl.offsetWidth / 2;
+        var py = parentEl.offsetTop + parentEl.offsetHeight;
 
-        // Curva bezier vertical
-        var midY = y1 + (y2 - y1) * 0.5;
-        var d = 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2;
+        // Ponto medio vertical entre pai e filhos
+        var firstChild = cardMap[children[0]];
+        if (!firstChild) continue;
+        var childY = firstChild.offsetTop;
+        var midY = py + (childY - py) / 2;
 
-        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", d);
-        svg.appendChild(path);
+        // Linha vertical do pai ate o ponto medio
+        var lineDown = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        lineDown.setAttribute("x1", px);
+        lineDown.setAttribute("y1", py);
+        lineDown.setAttribute("x2", px);
+        lineDown.setAttribute("y2", midY);
+        svg.appendChild(lineDown);
+
+        if (children.length === 1) {
+            // Apenas uma linha vertical direto ao filho
+            var childEl = cardMap[children[0]];
+            if (childEl) {
+                var cx = childEl.offsetLeft + childEl.offsetWidth / 2;
+                var cy = childEl.offsetTop;
+                var lineToChild = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                lineToChild.setAttribute("x1", px);
+                lineToChild.setAttribute("y1", midY);
+                lineToChild.setAttribute("x2", cx);
+                lineToChild.setAttribute("y2", cy);
+                svg.appendChild(lineToChild);
+            }
+        } else {
+            // Linha horizontal conectando todos os filhos no ponto medio
+            var minX = Infinity, maxX = -Infinity;
+            var childPositions = [];
+            for (var c = 0; c < children.length; c++) {
+                var childEl = cardMap[children[c]];
+                if (!childEl) continue;
+                var cx = childEl.offsetLeft + childEl.offsetWidth / 2;
+                childPositions.push(cx);
+                if (cx < minX) minX = cx;
+                if (cx > maxX) maxX = cx;
+            }
+
+            // Linha horizontal
+            var lineHoriz = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            lineHoriz.setAttribute("x1", minX);
+            lineHoriz.setAttribute("y1", midY);
+            lineHoriz.setAttribute("x2", maxX);
+            lineHoriz.setAttribute("y2", midY);
+            svg.appendChild(lineHoriz);
+
+            // Linhas verticais da barra horizontal para cada filho
+            for (var c = 0; c < children.length; c++) {
+                var childEl = cardMap[children[c]];
+                if (!childEl) continue;
+                var cx = childEl.offsetLeft + childEl.offsetWidth / 2;
+                var cy = childEl.offsetTop;
+
+                var lineChildDown = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                lineChildDown.setAttribute("x1", cx);
+                lineChildDown.setAttribute("y1", midY);
+                lineChildDown.setAttribute("x2", cx);
+                lineChildDown.setAttribute("y2", cy);
+                svg.appendChild(lineChildDown);
+            }
+        }
     }
 
     updateParentSelect();

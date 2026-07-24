@@ -99,7 +99,11 @@ main {
     stroke: #4a6fa5;
     stroke-width: 2;
     fill: none;
-    marker-end: url(#arrowhead);
+}
+
+.lines-svg line {
+    stroke: #4a6fa5;
+    stroke-width: 2;
 }
 
 #nodesContainer {
