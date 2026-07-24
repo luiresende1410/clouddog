@@ -1,8 +1,8 @@
 {
   "rules": {
     "nodes": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null && auth.token.email.endsWith('@clouddog.com.br')",
+      ".write": "auth != null && auth.token.email.endsWith('@clouddog.com.br')"
     }
   }
 }

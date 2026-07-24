@@ -8,18 +8,44 @@
 </head>
 <body>
     <header>
-        <h1>&#128054; CloudDog</h1>
-        <p class="subtitle">Mapa Organizacional Interativo</p>
+        <div class="header-row">
+            <div>
+                <h1>&#128054; CloudDog</h1>
+                <p class="subtitle">Mapa Organizacional Interativo</p>
+            </div>
+            <div id="authArea" class="auth-area">
+                <button id="btnLogin" class="btn btn-login" style="display:none;">Entrar com Google</button>
+                <div id="userInfo" class="user-info" style="display:none;">
+                    <img id="userPhoto" class="user-photo" alt="">
+                    <span id="userName"></span>
+                    <button id="btnLogout" class="btn btn-small">Sair</button>
+                </div>
+            </div>
+        </div>
     </header>
 
     <main>
-        <div class="toolbar">
-            <button id="btnAddNode" class="btn btn-primary">+ Nova Area</button>
+        <!-- Login Wall -->
+        <div class="login-wall" id="loginWall">
+            <h2>&#128274; Acesso Restrito</h2>
+            <p>Apenas colaboradores CloudDog podem acessar este sistema.</p>
+            <button id="btnLoginLarge" class="btn-login-large">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                Entrar com Google (@clouddog.com.br)
+            </button>
+            <p class="error-msg" id="loginError" style="display:none;"></p>
         </div>
-        <div class="chart-container" id="chartContainer">
-            <div class="chart-inner" id="chartInner">
-                <svg id="linesSvg" class="lines-svg"></svg>
-                <div id="nodesContainer"></div>
+
+        <!-- App Content (hidden until login) -->
+        <div id="appContent" style="display:none;">
+            <div class="toolbar">
+                <button id="btnAddNode" class="btn btn-primary">+ Nova Area</button>
+            </div>
+            <div class="chart-container" id="chartContainer">
+                <div class="chart-inner" id="chartInner">
+                    <svg id="linesSvg" class="lines-svg"></svg>
+                    <div id="nodesContainer"></div>
+                </div>
             </div>
         </div>
     </main>
@@ -73,6 +99,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

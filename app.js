@@ -1,22 +1,124 @@
 // ============================================================
 // CONFIGURACAO FIREBASE
 // ============================================================
-const firebaseConfig = {
-    databaseURL: "https://clouddog-adm-default-rtdb.firebaseio.com"
+var firebaseConfig = {
+    apiKey: "AIzaSyDFSdc-m9YwhpxYNBhbMgUIBBjEPIT-IsQ",
+    authDomain: "clouddog-adm.firebaseapp.com",
+    databaseURL: "https://clouddog-adm-default-rtdb.firebaseio.com",
+    projectId: "clouddog-adm",
+    storageBucket: "clouddog-adm.firebasestorage.app",
+    messagingSenderId: "889049198752",
+    appId: "1:889049198752:web:378fbb107736e11352d9c5",
+    measurementId: "G-KR3W9VTRYZ"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const nodesRef = db.ref('nodes');
+var db = firebase.database();
+var auth = firebase.auth();
+var nodesRef = db.ref('nodes');
+var provider = new firebase.auth.GoogleAuthProvider();
+
+// Restringir ao dominio clouddog.com.br
+var ALLOWED_DOMAIN = "clouddog.com.br";
 
 // ============================================================
 // ESTADO DA APLICACAO
 // ============================================================
 var nodes = {};
 var editingNodeId = null;
+var currentUser = null;
+var dbListener = null;
 
 // ============================================================
-// DADOS INICIAIS (caso o Firebase esteja vazio)
+// AUTENTICACAO
+// ============================================================
+auth.onAuthStateChanged(function(user) {
+    if (user) {
+        var email = user.email || '';
+        var domain = email.split('@')[1];
+
+        if (domain === ALLOWED_DOMAIN) {
+            // Acesso permitido
+            currentUser = user;
+            showApp(user);
+            startListening();
+        } else {
+            // Dominio nao autorizado
+            auth.signOut();
+            showLoginWall('Acesso restrito a emails @' + ALLOWED_DOMAIN);
+        }
+    } else {
+        currentUser = null;
+        stopListening();
+        showLoginWall(null);
+    }
+});
+
+function showApp(user) {
+    document.getElementById('btnLogin').style.display = 'none';
+    document.getElementById('userInfo').style.display = 'flex';
+    document.getElementById('userName').textContent = user.displayName || user.email;
+    document.getElementById('userPhoto').src = user.photoURL || '';
+    document.getElementById('appContent').style.display = 'block';
+    document.getElementById('loginWall').style.display = 'none';
+}
+
+function showLoginWall(errorMsg) {
+    document.getElementById('btnLogin').style.display = 'inline-block';
+    document.getElementById('userInfo').style.display = 'none';
+    document.getElementById('appContent').style.display = 'none';
+    document.getElementById('loginWall').style.display = 'flex';
+
+    var errorEl = document.getElementById('loginError');
+    if (errorMsg) {
+        errorEl.textContent = errorMsg;
+        errorEl.style.display = 'block';
+    } else {
+        errorEl.style.display = 'none';
+    }
+}
+
+function doLogin() {
+    provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
+    auth.signInWithPopup(provider).catch(function(error) {
+        console.error('Login error:', error);
+        showLoginWall('Erro ao fazer login. Tente novamente.');
+    });
+}
+
+function doLogout() {
+    auth.signOut();
+}
+
+// ============================================================
+// FIREBASE REALTIME - ESCUTAR DADOS
+// ============================================================
+function startListening() {
+    if (dbListener) return;
+    dbListener = nodesRef.on('value', function(snapshot) {
+        var val = snapshot.val();
+        if (val) {
+            nodes = val;
+        } else {
+            nodesRef.set(defaultNodes);
+            nodes = defaultNodes;
+        }
+        render();
+    });
+}
+
+function stopListening() {
+    if (dbListener) {
+        nodesRef.off('value', dbListener);
+        dbListener = null;
+    }
+    nodes = {};
+    var container = document.getElementById('nodesContainer');
+    if (container) container.innerHTML = '';
+}
+
+// ============================================================
+// DADOS INICIAIS
 // ============================================================
 var defaultNodes = {
     "clouddog": {
@@ -209,20 +311,6 @@ var defaultNodes = {
 };
 
 // ============================================================
-// FIREBASE - ESCUTAR MUDANCAS EM TEMPO REAL
-// ============================================================
-nodesRef.on('value', function(snapshot) {
-    var val = snapshot.val();
-    if (val) {
-        nodes = val;
-    } else {
-        nodesRef.set(defaultNodes);
-        nodes = defaultNodes;
-    }
-    render();
-});
-
-// ============================================================
 // HELPERS
 // ============================================================
 function getChildren(parentId) {
@@ -237,16 +325,6 @@ function getChildren(parentId) {
         return (nodes[a].order || 0) - (nodes[b].order || 0);
     });
     return children;
-}
-
-function getSubtreeLeafCount(nodeId) {
-    var children = getChildren(nodeId);
-    if (children.length === 0) return 1;
-    var count = 0;
-    for (var i = 0; i < children.length; i++) {
-        count += getSubtreeLeafCount(children[i]);
-    }
-    return count;
 }
 
 function isLeaf(nodeId) {
@@ -285,7 +363,6 @@ function render() {
     var H_GAP = 30;
     var V_GAP = 60;
 
-    // Estimar altura de cada no
     function estimateNodeHeight(id) {
         var node = nodes[id];
         var h = NODE_H_BASE;
@@ -295,7 +372,6 @@ function render() {
         return h;
     }
 
-    // Calcular largura necessaria de uma subarvore
     function subtreeWidth(id) {
         var children = getChildren(id);
         if (children.length === 0) return NODE_W;
@@ -307,7 +383,6 @@ function render() {
         return Math.max(NODE_W, total);
     }
 
-    // Posicionar nos recursivamente
     var positions = {};
     var nodeHeights = {};
 
@@ -330,11 +405,9 @@ function render() {
             if (i > 0) totalChildW += H_GAP;
         }
 
-        // Centrar o no acima dos filhos
         var nodeX = x + totalChildW / 2 - NODE_W / 2;
         positions[id] = { x: nodeX, y: y, w: NODE_W, h: h };
 
-        // Posicionar filhos
         var childY = y + h + V_GAP;
         var cx = x;
         for (var i = 0; i < children.length; i++) {
@@ -345,7 +418,7 @@ function render() {
         return totalChildW;
     }
 
-    // Layout cada raiz
+    // Layout raizes
     var totalW = 0;
     var rootWidths = [];
     for (var i = 0; i < roots.length; i++) {
@@ -361,15 +434,13 @@ function render() {
         startX += rootWidths[i] + H_GAP * 2;
     }
 
-    // Calcular dimensoes totais
+    // Dimensoes
     var maxX = 0, maxY = 0;
     var posKeys = Object.keys(positions);
     for (var i = 0; i < posKeys.length; i++) {
         var p = positions[posKeys[i]];
-        var right = p.x + p.w;
-        var bottom = p.y + p.h;
-        if (right > maxX) maxX = right;
-        if (bottom > maxY) maxY = bottom;
+        if (p.x + p.w > maxX) maxX = p.x + p.w;
+        if (p.y + p.h > maxY) maxY = p.y + p.h;
     }
 
     var chartW = maxX + 40;
@@ -382,7 +453,7 @@ function render() {
     svg.style.width = chartW + 'px';
     svg.style.height = chartH + 'px';
 
-    // Desenhar nos
+    // Renderizar nos
     for (var i = 0; i < keys.length; i++) {
         var id = keys[i];
         var node = nodes[id];
@@ -419,7 +490,7 @@ function render() {
         container.appendChild(div);
     }
 
-    // Desenhar conectores estilo organograma
+    // Conectores estilo organograma
     for (var i = 0; i < keys.length; i++) {
         var id = keys[i];
         var node = nodes[id];
@@ -430,22 +501,14 @@ function render() {
 
         var parentH = nodeHeights[node.parent] || NODE_H_BASE;
 
-        // Ponto de saida: centro-baixo do pai
         var x1 = parentPos.x + parentPos.w / 2;
         var y1 = parentPos.y + parentH;
-
-        // Ponto de entrada: centro-topo do filho
         var x2 = childPos.x + childPos.w / 2;
         var y2 = childPos.y;
-
-        // Ponto intermediario (metade entre pai e filho)
         var midY = y1 + (y2 - y1) / 2;
 
-        // Linha vertical do pai ao midY
         appendLine(svg, x1, y1, x1, midY);
-        // Linha horizontal do midY ate x2
         appendLine(svg, x1, midY, x2, midY);
-        // Linha vertical do midY ate o filho
         appendLine(svg, x2, midY, x2, y2);
     }
 
@@ -475,8 +538,7 @@ function handleNodeClick(e) {
 
 function handleNodeRightClick(e) {
     e.preventDefault();
-    var id = this.getAttribute('data-id');
-    openEditForm(id);
+    openEditForm(this.getAttribute('data-id'));
 }
 
 // ============================================================
@@ -487,7 +549,6 @@ function openDetailModal(key) {
     if (!item) return;
 
     var html = '<h2>' + item.name + '</h2>';
-
     html += '<h3>&#128100; Equipe</h3><ul>';
     if (item.gestor) html += '<li><strong>Gestor:</strong> ' + item.gestor + '</li>';
     if (item.lider) html += '<li><strong>Cargo/Lider:</strong> ' + item.lider + '</li>';
@@ -600,10 +661,7 @@ document.getElementById('nodeForm').addEventListener('submit', function(e) {
     var linksLines = linksText.split('\n').filter(function(l) { return l.trim() !== ''; });
     var links = linksLines.map(function(line) {
         var parts = line.split('|');
-        return {
-            label: (parts[0] || '').trim(),
-            url: (parts[1] || '#').trim()
-        };
+        return { label: (parts[0] || '').trim(), url: (parts[1] || '#').trim() };
     });
 
     var textColor = isLightColor(color) ? '#333' : '#fff';
@@ -681,6 +739,10 @@ function closeAllModals() {
 document.getElementById('btnAddNode').addEventListener('click', function() {
     openEditForm(null);
 });
+
+document.getElementById('btnLogin').addEventListener('click', doLogin);
+document.getElementById('btnLoginLarge').addEventListener('click', doLogin);
+document.getElementById('btnLogout').addEventListener('click', doLogout);
 
 document.getElementById('btnCloseModal').addEventListener('click', function() {
     document.getElementById('modalOverlay').classList.remove('active');
