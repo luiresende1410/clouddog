@@ -72,8 +72,11 @@
                 <div class="toolbar">
                     <button id="btnAddProcesso" class="btn btn-primary">+ Novo Processo</button>
                 </div>
-                <div class="processos-grid" id="processosGrid">
-                    <!-- Preenchido via JS -->
+                <div class="chart-container" id="processosChartContainer">
+                    <div class="chart-inner" id="processosInner">
+                        <svg id="processosSvg" class="lines-svg"></svg>
+                        <div id="processosContainer"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -127,10 +130,12 @@
                 <input type="hidden" id="processoFormId">
                 <label for="processoFormName">Nome do Processo *</label>
                 <input type="text" id="processoFormName" required placeholder="Ex: Onboarding, Gestao de Incidentes...">
+                <label for="processoFormParent">Processo Pai</label>
+                <select id="processoFormParent">
+                    <option value="">(Nenhum - nivel raiz)</option>
+                </select>
                 <label for="processoFormOwner">Owner (Responsavel)</label>
                 <input type="text" id="processoFormOwner" placeholder="Nome do responsavel">
-                <label for="processoFormArea">Area Relacionada</label>
-                <input type="text" id="processoFormArea" placeholder="Ex: CloudOps, Cyber Security...">
                 <label for="processoFormColor">Cor</label>
                 <input type="color" id="processoFormColor" value="#3498db">
                 <label>Links (um por linha: Nome | URL)</label>

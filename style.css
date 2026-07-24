@@ -302,73 +302,117 @@ body {
 
 .node-card.is-root::before { display: none; }
 
-/* ============ PROCESSOS GRID ============ */
-.processos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 16px;
-}
-
-.processo-card {
+/* ============ PROCESSOS TREE ============ */
+.proc-node {
+    position: absolute;
     background: #12132a;
     border-radius: 10px;
     border: 1px solid #2a2d45;
     border-left: 4px solid #3498db;
-    padding: 18px 20px;
+    padding: 12px 14px;
+    cursor: default;
+    z-index: 2;
     transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.processo-card:hover {
-    transform: translateY(-2px);
+.proc-node:hover {
+    transform: scale(1.03);
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 
-.processo-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-}
-
-.processo-header h3 {
-    font-size: 1rem;
+.proc-node .proc-title {
+    font-weight: 700;
+    font-size: 0.85rem;
     color: #fff;
-    font-weight: 600;
+    margin-bottom: 4px;
 }
 
-.processo-edit {
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: #888;
-    transition: color 0.2s;
-}
-
-.processo-edit:hover { color: #f5c842; }
-
-.processo-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 12px;
-    font-size: 0.82rem;
+.proc-node .proc-owner {
+    font-size: 0.72rem;
     color: #aaa;
+    margin-bottom: 6px;
 }
 
-.processo-links {
+.proc-node .proc-links {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-top: 10px;
+    gap: 3px;
     border-top: 1px solid #2a2d45;
+    padding-top: 6px;
+    margin-top: 4px;
 }
 
-.processo-links a {
+.proc-node .proc-links a {
     color: #85c1e9;
     text-decoration: none;
-    font-size: 0.82rem;
+    font-size: 0.72rem;
 }
 
-.processo-links a:hover { text-decoration: underline; }
+.proc-node .proc-links a:hover { text-decoration: underline; }
+
+.proc-node .proc-more {
+    font-size: 0.68rem;
+    color: #666;
+}
+
+.proc-node .proc-edit {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #f5c842;
+    color: #333;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    cursor: pointer;
+}
+
+.proc-node:hover .proc-edit { opacity: 1; }
+
+.proc-node .proc-toggle {
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3d5a80;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    border: 2px solid #16172b;
+    transition: background 0.2s;
+}
+
+.proc-node .proc-toggle:hover { background: #f5c842; color: #333; }
+.proc-node.is-collapsed .proc-toggle { background: #e67e22; }
+
+.proc-node::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: #3d5a80;
+    border-radius: 50%;
+    border: 2px solid #16172b;
+}
+
+.proc-node.is-root::before { display: none; }
 
 /* ============ MODALS ============ */
 .modal-overlay {
