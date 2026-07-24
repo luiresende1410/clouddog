@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudDog - Mapa Organizacional</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>&#128054; CloudDog</h1>
+        <p class="subtitle">Mapa Organizacional Interativo</p>
+    </header>
+
+    <main>
+        <div class="toolbar">
+            <button id="btnAddNode" class="btn btn-primary">+ Nova Area</button>
+        </div>
+        <div class="chart-container" id="chartContainer">
+            <svg id="linesSvg" class="lines-svg">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#4a6fa5" />
+                    </marker>
+                </defs>
+            </svg>
+            <div id="nodesContainer"></div>
+        </div>
+    </main>
+
+    <!-- Modal de Detalhes / Edicao -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <button class="modal-close" id="btnCloseModal">&#215;</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Adicionar/Editar Area -->
+    <div class="modal-overlay" id="formOverlay">
+        <div class="modal modal-form">
+            <button class="modal-close" id="btnCloseForm">&#215;</button>
+            <h2 id="formTitle">Nova Area</h2>
+            <form id="nodeForm">
+                <input type="hidden" id="formNodeId">
+
+                <label for="formName">Nome da Area *</label>
+                <input type="text" id="formName" required placeholder="Ex: SOC, FinOps...">
+
+                <label for="formParent">Area Pai</label>
+                <select id="formParent">
+                    <option value="">(Nenhuma - nivel raiz)</option>
+                </select>
+
+                <label for="formColor">Cor</label>
+                <input type="color" id="formColor" value="#2980b9">
+
+                <label for="formGestor">Gestor</label>
+                <input type="text" id="formGestor" placeholder="Nome do Gestor">
+
+                <label for="formLider">Lider</label>
+                <input type="text" id="formLider" placeholder="Nome do Lider">
+
+                <label>Membros (um por linha)</label>
+                <textarea id="formMembros" rows="4" placeholder="Membro 1&#10;Membro 2&#10;Membro 3"></textarea>
+
+                <label>Links de Processos (um por linha: Nome | URL)</label>
+                <textarea id="formLinks" rows="4" placeholder="Runbook SOC | https://link.com&#10;Dashboard | https://outro.com"></textarea>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" class="btn btn-danger" id="btnDeleteNode" style="display:none;">Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
