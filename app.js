@@ -37,6 +37,9 @@ var dragOrigLeft = 0;
 var dragOrigTop = 0;
 var isDragging = false;
 
+// Collapse state (local, nao salva no Firebase)
+var collapsedNodes = {};
+
 // ============================================================
 // AUTENTICACAO
 // ============================================================
@@ -164,7 +167,7 @@ function isLeaf(nodeId) {
 
 function subtreeWidth(id) {
     var children = getChildren(id);
-    if (children.length === 0) return NODE_W;
+    if (children.length === 0 || collapsedNodes[id]) return NODE_W;
     var total = 0;
     for (var i = 0; i < children.length; i++) {
         if (i > 0) total += H_GAP;
@@ -222,7 +225,7 @@ function render() {
         nodeHeights[id] = h;
         var children = getChildren(id);
 
-        if (children.length === 0) {
+        if (children.length === 0 || collapsedNodes[id]) {
             positions[id] = { x: x, y: y, w: NODE_W, h: h };
             return NODE_W;
         }
@@ -289,10 +292,15 @@ function render() {
         var pos = positions[id];
         if (!pos) continue;
 
+        var children = getChildren(id);
+        var hasChildren = children.length > 0;
+        var isCollapsed = !!collapsedNodes[id];
+
         var div = document.createElement('div');
         div.className = 'node-card';
         if (!node.parent || node.parent === '') div.className += ' is-root';
-        if (isLeaf(id)) div.className += ' is-leaf';
+        if (!hasChildren) div.className += ' is-leaf';
+        if (isCollapsed) div.className += ' is-collapsed';
 
         div.style.background = node.color || '#2980b9';
         div.style.color = node.textColor || '#fff';
@@ -311,6 +319,13 @@ function render() {
             html += '</div>';
         }
 
+        // Botao collapse/expand
+        if (hasChildren) {
+            var toggleLabel = isCollapsed ? '+' : '−';
+            var childCount = children.length;
+            html += '<span class="toggle-btn" data-toggle-id="' + id + '" title="' + (isCollapsed ? 'Expandir' : 'Colapsar') + ' (' + childCount + ')">' + toggleLabel + '</span>';
+        }
+
         div.innerHTML = html;
         div.addEventListener('mousedown', onDragStart);
         div.addEventListener('touchstart', onDragStart, { passive: false });
@@ -322,6 +337,8 @@ function render() {
         var id = keys[i];
         var node = nodes[id];
         if (!node.parent || node.parent === '') continue;
+        // Nao desenhar se o pai esta colapsado
+        if (collapsedNodes[node.parent]) continue;
         var parentPos = positions[node.parent];
         var childPos = positions[id];
         if (!parentPos || !childPos) continue;
@@ -356,6 +373,20 @@ function appendLine(svg, x1, y1, x2, y2) {
 function onDragStart(e) {
     // Ignorar se clicou no edit icon
     if (e.target.classList.contains('edit-icon')) return;
+
+    // Toggle collapse/expand
+    if (e.target.classList.contains('toggle-btn')) {
+        var toggleId = e.target.getAttribute('data-toggle-id');
+        if (toggleId) {
+            if (collapsedNodes[toggleId]) {
+                delete collapsedNodes[toggleId];
+            } else {
+                collapsedNodes[toggleId] = true;
+            }
+            render();
+        }
+        return;
+    }
 
     var el = e.currentTarget;
     var id = el.getAttribute('data-id');

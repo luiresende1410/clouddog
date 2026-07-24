@@ -290,7 +290,39 @@ main {
     opacity: 1;
 }
 
-/* Connector dot on node bottom */
+/* Toggle collapse/expand button */
+.node-card .toggle-btn {
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3d5a80;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    border: 2px solid #16172b;
+    line-height: 1;
+    transition: background 0.2s;
+}
+
+.node-card .toggle-btn:hover {
+    background: #f5c842;
+    color: #333;
+}
+
+.node-card.is-collapsed .toggle-btn {
+    background: #e67e22;
+}
+
+/* Connector dot on node bottom - hidden when has toggle btn */
 .node-card::after {
     content: '';
     position: absolute;
@@ -302,6 +334,11 @@ main {
     background: #3d5a80;
     border-radius: 50%;
     border: 2px solid #16172b;
+    display: none;
+}
+
+.node-card.is-leaf::after {
+    display: none;
 }
 
 .node-card::before {
@@ -319,11 +356,6 @@ main {
 
 /* Root node has no top dot */
 .node-card.is-root::before {
-    display: none;
-}
-
-/* Leaf nodes have no bottom dot */
-.node-card.is-leaf::after {
     display: none;
 }
 
