@@ -18,16 +18,24 @@ var auth = firebase.auth();
 var nodesRef = db.ref('nodes');
 var provider = new firebase.auth.GoogleAuthProvider();
 
-// Restringir ao dominio clouddog.com.br
 var ALLOWED_DOMAIN = "clouddog.com.br";
 
 // ============================================================
-// ESTADO DA APLICACAO
+// ESTADO
 // ============================================================
 var nodes = {};
 var editingNodeId = null;
 var currentUser = null;
 var dbListener = null;
+
+// Drag state
+var dragId = null;
+var dragEl = null;
+var dragStartX = 0;
+var dragStartY = 0;
+var dragOrigLeft = 0;
+var dragOrigTop = 0;
+var isDragging = false;
 
 // ============================================================
 // AUTENTICACAO
@@ -36,14 +44,11 @@ auth.onAuthStateChanged(function(user) {
     if (user) {
         var email = user.email || '';
         var domain = email.split('@')[1];
-
         if (domain === ALLOWED_DOMAIN) {
-            // Acesso permitido
             currentUser = user;
             showApp(user);
             startListening();
         } else {
-            // Dominio nao autorizado
             auth.signOut();
             showLoginWall('Acesso restrito a emails @' + ALLOWED_DOMAIN);
         }
@@ -68,7 +73,6 @@ function showLoginWall(errorMsg) {
     document.getElementById('userInfo').style.display = 'none';
     document.getElementById('appContent').style.display = 'none';
     document.getElementById('loginWall').style.display = 'flex';
-
     var errorEl = document.getElementById('loginError');
     if (errorMsg) {
         errorEl.textContent = errorMsg;
@@ -81,17 +85,14 @@ function showLoginWall(errorMsg) {
 function doLogin() {
     provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
     auth.signInWithPopup(provider).catch(function(error) {
-        console.error('Login error:', error);
         showLoginWall('Erro ao fazer login. Tente novamente.');
     });
 }
 
-function doLogout() {
-    auth.signOut();
-}
+function doLogout() { auth.signOut(); }
 
 // ============================================================
-// FIREBASE REALTIME - ESCUTAR DADOS
+// FIREBASE REALTIME
 // ============================================================
 function startListening() {
     if (dbListener) return;
@@ -113,201 +114,31 @@ function stopListening() {
         dbListener = null;
     }
     nodes = {};
-    var container = document.getElementById('nodesContainer');
-    if (container) container.innerHTML = '';
+    var c = document.getElementById('nodesContainer');
+    if (c) c.innerHTML = '';
 }
 
 // ============================================================
 // DADOS INICIAIS
 // ============================================================
 var defaultNodes = {
-    "clouddog": {
-        name: "CloudDog",
-        parent: "",
-        color: "#f5c842",
-        textColor: "#333",
-        gestor: "Alessandro Oliveira",
-        lider: "CEO",
-        membros: [],
-        links: [{ label: "Site Institucional", url: "#" }],
-        order: 0
-    },
-    "cyber": {
-        name: "Cyber Security",
-        parent: "clouddog",
-        color: "#e74c3c",
-        textColor: "#fff",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Membro 1", "Membro 2"],
-        links: [{ label: "Processo de Resposta a Incidentes", url: "#" }],
-        order: 1
-    },
-    "soc": {
-        name: "SOC",
-        parent: "cyber",
-        color: "#f1948a",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Analista 1", "Analista 2"],
-        links: [{ label: "Runbook SOC", url: "#" }],
-        order: 2
-    },
-    "siem": {
-        name: "SIEM",
-        parent: "cyber",
-        color: "#f1948a",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Engenheiro 1", "Engenheiro 2"],
-        links: [{ label: "Documentacao SIEM", url: "#" }],
-        order: 3
-    },
-    "cloudops": {
-        name: "CloudOps",
-        parent: "clouddog",
-        color: "#2c3e50",
-        textColor: "#fff",
-        gestor: "Luiz Resende",
-        lider: "Head de Operacoes em Nuvem",
-        membros: [],
-        links: [{ label: "Processos CloudOps", url: "#" }],
-        order: 4
-    },
-    "projetos": {
-        name: "PROJETOS",
-        parent: "cloudops",
-        color: "#2980b9",
-        textColor: "#fff",
-        gestor: "Nome do Gestor",
-        lider: "Lider DevOps",
-        membros: ["PM 1", "PM 2"],
-        links: [{ label: "Metodologia de Projetos", url: "#" }],
-        order: 5
-    },
-    "migracao": {
-        name: "Migracao",
-        parent: "projetos",
-        color: "#85c1e9",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Eng. Cloud 1", "Eng. Cloud 2"],
-        links: [{ label: "Processo de Migracao", url: "#" }],
-        order: 6
-    },
-    "modernizacao": {
-        name: "Modernizacao",
-        parent: "projetos",
-        color: "#85c1e9",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Arquiteto 1", "Dev 1"],
-        links: [{ label: "Framework de Modernizacao", url: "#" }],
-        order: 7
-    },
-    "msp": {
-        name: "MSP",
-        parent: "cloudops",
-        color: "#2980b9",
-        textColor: "#fff",
-        gestor: "Nome do Gestor",
-        lider: "Lider Nuvem Gerenciada",
-        membros: [],
-        links: [{ label: "SLA e Contratos", url: "#" }],
-        order: 8
-    },
-    "secops": {
-        name: "SecOps",
-        parent: "msp",
-        color: "#85c1e9",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Eng. SecOps 1", "Eng. SecOps 2"],
-        links: [{ label: "Processo SecOps", url: "#" }],
-        order: 9
-    },
-    "finops": {
-        name: "FinOps",
-        parent: "msp",
-        color: "#85c1e9",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Analista FinOps 1", "Analista FinOps 2"],
-        links: [{ label: "Dashboard de Custos", url: "#" }],
-        order: 10
-    },
-    "sre": {
-        name: "SRE",
-        parent: "msp",
-        color: "#85c1e9",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["SRE 1", "SRE 2"],
-        links: [{ label: "SLOs e SLIs", url: "#" }],
-        order: 11
-    },
-    "inovacao": {
-        name: "Inovacao",
-        parent: "clouddog",
-        color: "#1abc9c",
-        textColor: "#fff",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: [],
-        links: [{ label: "Pipeline de Inovacao", url: "#" }],
-        order: 12
-    },
-    "genai": {
-        name: "GenAI",
-        parent: "inovacao",
-        color: "#76d7c4",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["ML Engineer 1"],
-        links: [{ label: "Projetos GenAI", url: "#" }],
-        order: 13
-    },
-    "dados": {
-        name: "Dados",
-        parent: "inovacao",
-        color: "#76d7c4",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Data Engineer 1", "Data Analyst 1"],
-        links: [{ label: "Data Catalog", url: "#" }],
-        order: 14
-    },
-    "ml": {
-        name: "Machine Learning",
-        parent: "inovacao",
-        color: "#76d7c4",
-        textColor: "#333",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["ML Engineer 1", "Data Scientist 1"],
-        links: [{ label: "MLOps Pipeline", url: "#" }],
-        order: 15
-    },
-    "dev": {
-        name: "Desenvolvimento",
-        parent: "inovacao",
-        color: "#1abc9c",
-        textColor: "#fff",
-        gestor: "Nome do Gestor",
-        lider: "Nome do Lider",
-        membros: ["Dev 1", "Dev 2", "Dev 3"],
-        links: [{ label: "Padroes de Codigo", url: "#" }, { label: "CI/CD Pipeline", url: "#" }],
-        order: 16
-    }
+    "clouddog": { name: "CloudDog", parent: "", color: "#f5c842", textColor: "#333", gestor: "Alessandro Oliveira", lider: "CEO", membros: [], links: [{ label: "Site Institucional", url: "#" }], order: 0 },
+    "cyber": { name: "Cyber Security", parent: "clouddog", color: "#e74c3c", textColor: "#fff", gestor: "", lider: "", membros: [], links: [], order: 1 },
+    "soc": { name: "SOC", parent: "cyber", color: "#f1948a", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 2 },
+    "siem": { name: "SIEM", parent: "cyber", color: "#f1948a", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 3 },
+    "cloudops": { name: "CloudOps", parent: "clouddog", color: "#2c3e50", textColor: "#fff", gestor: "Luiz Resende", lider: "Head de Operacoes em Nuvem", membros: [], links: [], order: 4 },
+    "projetos": { name: "PROJETOS", parent: "cloudops", color: "#2980b9", textColor: "#fff", gestor: "", lider: "Lider DevOps", membros: [], links: [], order: 5 },
+    "migracao": { name: "Migracao", parent: "projetos", color: "#85c1e9", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 6 },
+    "modernizacao": { name: "Modernizacao", parent: "projetos", color: "#85c1e9", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 7 },
+    "msp": { name: "MSP", parent: "cloudops", color: "#2980b9", textColor: "#fff", gestor: "", lider: "Lider Nuvem Gerenciada", membros: [], links: [], order: 8 },
+    "secops": { name: "SecOps", parent: "msp", color: "#85c1e9", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 9 },
+    "finops": { name: "FinOps", parent: "msp", color: "#85c1e9", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 10 },
+    "sre": { name: "SRE", parent: "msp", color: "#85c1e9", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 11 },
+    "inovacao": { name: "Inovacao", parent: "clouddog", color: "#1abc9c", textColor: "#fff", gestor: "", lider: "", membros: [], links: [], order: 12 },
+    "genai": { name: "GenAI", parent: "inovacao", color: "#76d7c4", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 13 },
+    "dados": { name: "Dados", parent: "inovacao", color: "#76d7c4", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 14 },
+    "ml": { name: "Machine Learning", parent: "inovacao", color: "#76d7c4", textColor: "#333", gestor: "", lider: "", membros: [], links: [], order: 15 },
+    "dev": { name: "Desenvolvimento", parent: "inovacao", color: "#1abc9c", textColor: "#fff", gestor: "", lider: "", membros: [], links: [], order: 16 }
 };
 
 // ============================================================
@@ -331,9 +162,37 @@ function isLeaf(nodeId) {
     return getChildren(nodeId).length === 0;
 }
 
+function subtreeWidth(id) {
+    var children = getChildren(id);
+    if (children.length === 0) return NODE_W;
+    var total = 0;
+    for (var i = 0; i < children.length; i++) {
+        if (i > 0) total += H_GAP;
+        total += subtreeWidth(children[i]);
+    }
+    return Math.max(NODE_W, total);
+}
+
+function estimateNodeHeight(id) {
+    var node = nodes[id];
+    var h = NODE_H_BASE;
+    if (node.membros && node.membros.length > 0) {
+        h += Math.min(node.membros.length, 6) * 13 + 10;
+    }
+    return h;
+}
+
+var NODE_W = 150;
+var NODE_H_BASE = 56;
+var H_GAP = 30;
+var V_GAP = 60;
+
 // ============================================================
 // RENDER
 // ============================================================
+var positions = {};
+var nodeHeights = {};
+
 function render() {
     var chartInner = document.getElementById('chartInner');
     var container = document.getElementById('nodesContainer');
@@ -341,6 +200,8 @@ function render() {
 
     container.innerHTML = '';
     svg.innerHTML = '';
+    positions = {};
+    nodeHeights = {};
 
     var keys = Object.keys(nodes);
     if (keys.length === 0) {
@@ -348,7 +209,6 @@ function render() {
         return;
     }
 
-    // Encontrar raizes
     var roots = [];
     for (var i = 0; i < keys.length; i++) {
         if (!nodes[keys[i]].parent || nodes[keys[i]].parent === '') {
@@ -356,35 +216,6 @@ function render() {
         }
     }
     if (roots.length === 0) return;
-
-    // Layout config
-    var NODE_W = 150;
-    var NODE_H_BASE = 56;
-    var H_GAP = 30;
-    var V_GAP = 60;
-
-    function estimateNodeHeight(id) {
-        var node = nodes[id];
-        var h = NODE_H_BASE;
-        if (node.membros && node.membros.length > 0) {
-            h += Math.min(node.membros.length, 6) * 13 + 10;
-        }
-        return h;
-    }
-
-    function subtreeWidth(id) {
-        var children = getChildren(id);
-        if (children.length === 0) return NODE_W;
-        var total = 0;
-        for (var i = 0; i < children.length; i++) {
-            if (i > 0) total += H_GAP;
-            total += subtreeWidth(children[i]);
-        }
-        return Math.max(NODE_W, total);
-    }
-
-    var positions = {};
-    var nodeHeights = {};
 
     function layout(id, x, y) {
         var h = estimateNodeHeight(id);
@@ -414,7 +245,6 @@ function render() {
             layout(children[i], cx, childY);
             cx += childWidths[i] + H_GAP;
         }
-
         return totalChildW;
     }
 
@@ -445,7 +275,6 @@ function render() {
 
     var chartW = maxX + 40;
     var chartH = maxY + 40;
-
     chartInner.style.width = chartW + 'px';
     chartInner.style.height = chartH + 'px';
     svg.setAttribute('width', chartW);
@@ -474,23 +303,21 @@ function render() {
 
         var html = '<span class="edit-icon">&#9998;</span>';
         html += '<div class="node-title">' + node.name + '</div>';
-        if (node.lider) {
-            html += '<div class="node-role">' + node.lider + '</div>';
-        }
+        if (node.lider) html += '<div class="node-role">' + node.lider + '</div>';
         if (node.membros && node.membros.length > 0) {
-            var membrosShow = node.membros.slice(0, 6);
-            html += '<div class="node-members">' + membrosShow.join('<br>');
+            var show = node.membros.slice(0, 6);
+            html += '<div class="node-members">' + show.join('<br>');
             if (node.membros.length > 6) html += '<br>...';
             html += '</div>';
         }
 
         div.innerHTML = html;
-        div.addEventListener('click', handleNodeClick);
-        div.addEventListener('contextmenu', handleNodeRightClick);
+        div.addEventListener('mousedown', onDragStart);
+        div.addEventListener('touchstart', onDragStart, { passive: false });
         container.appendChild(div);
     }
 
-    // Conectores estilo organograma
+    // Conectores
     for (var i = 0; i < keys.length; i++) {
         var id = keys[i];
         var node = nodes[id];
@@ -500,7 +327,6 @@ function render() {
         if (!parentPos || !childPos) continue;
 
         var parentH = nodeHeights[node.parent] || NODE_H_BASE;
-
         var x1 = parentPos.x + parentPos.w / 2;
         var y1 = parentPos.y + parentH;
         var x2 = childPos.x + childPos.w / 2;
@@ -525,14 +351,154 @@ function appendLine(svg, x1, y1, x2, y2) {
 }
 
 // ============================================================
-// EVENTOS DOS NOS
+// DRAG AND DROP - Reordenar irmaos
+// ============================================================
+function onDragStart(e) {
+    // Ignorar se clicou no edit icon
+    if (e.target.classList.contains('edit-icon')) return;
+
+    var el = e.currentTarget;
+    var id = el.getAttribute('data-id');
+    if (!id) return;
+
+    e.preventDefault();
+    dragId = id;
+    dragEl = el;
+    isDragging = false;
+
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragStartX = clientX;
+    dragStartY = clientY;
+    dragOrigLeft = parseInt(el.style.left) || 0;
+    dragOrigTop = parseInt(el.style.top) || 0;
+
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('touchend', onDragEnd);
+}
+
+function onDragMove(e) {
+    if (!dragEl) return;
+    e.preventDefault();
+
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    var dx = clientX - dragStartX;
+    var dy = clientY - dragStartY;
+
+    // Iniciar drag apenas apos 5px de movimento
+    if (!isDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
+    isDragging = true;
+
+    dragEl.style.left = (dragOrigLeft + dx) + 'px';
+    dragEl.style.top = (dragOrigTop + dy) + 'px';
+    dragEl.style.zIndex = '100';
+    dragEl.style.opacity = '0.8';
+    dragEl.style.transition = 'none';
+
+    // Highlight drop target
+    highlightDropTarget(clientX, clientY);
+}
+
+function onDragEnd(e) {
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', onDragEnd);
+    document.removeEventListener('touchmove', onDragMove);
+    document.removeEventListener('touchend', onDragEnd);
+
+    if (!dragEl || !dragId) { resetDrag(); return; }
+
+    if (!isDragging) {
+        // Foi apenas um clique
+        var id = dragId;
+        resetDrag();
+        openDetailModal(id);
+        return;
+    }
+
+    // Encontrar o no sobre o qual soltou
+    var clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    var clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    var targetId = findDropTarget(clientX, clientY);
+
+    if (targetId && targetId !== dragId) {
+        // Reordenar: trocar a posicao (order) entre irmaos
+        var dragNode = nodes[dragId];
+        var targetNode = nodes[targetId];
+
+        if (dragNode.parent === targetNode.parent) {
+            // Irmaos - trocar order
+            var tempOrder = dragNode.order;
+            nodesRef.child(dragId).child('order').set(targetNode.order);
+            nodesRef.child(targetId).child('order').set(tempOrder);
+        } else {
+            // Mudar o pai do no arrastado para o targetId
+            nodesRef.child(dragId).child('parent').set(targetId);
+        }
+    }
+
+    resetDrag();
+    render();
+}
+
+function resetDrag() {
+    if (dragEl) {
+        dragEl.style.zIndex = '';
+        dragEl.style.opacity = '';
+        dragEl.style.transition = '';
+    }
+    dragId = null;
+    dragEl = null;
+    isDragging = false;
+    clearHighlights();
+}
+
+function findDropTarget(clientX, clientY) {
+    var container = document.getElementById('nodesContainer');
+    var cards = container.querySelectorAll('.node-card');
+    for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        if (card === dragEl) continue;
+        var rect = card.getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right &&
+            clientY >= rect.top && clientY <= rect.bottom) {
+            return card.getAttribute('data-id');
+        }
+    }
+    return null;
+}
+
+function highlightDropTarget(clientX, clientY) {
+    clearHighlights();
+    var targetId = findDropTarget(clientX, clientY);
+    if (targetId) {
+        var container = document.getElementById('nodesContainer');
+        var cards = container.querySelectorAll('.node-card');
+        for (var i = 0; i < cards.length; i++) {
+            if (cards[i].getAttribute('data-id') === targetId) {
+                cards[i].classList.add('drop-target');
+                break;
+            }
+        }
+    }
+}
+
+function clearHighlights() {
+    var cards = document.querySelectorAll('.node-card.drop-target');
+    for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.remove('drop-target');
+    }
+}
+
+// ============================================================
+// EVENTOS DOS NOS (edit icon)
 // ============================================================
 function handleNodeClick(e) {
     var id = this.getAttribute('data-id');
     if (e.target.classList.contains('edit-icon')) {
         openEditForm(id);
-    } else {
-        openDetailModal(id);
     }
 }
 
@@ -597,7 +563,6 @@ function openEditForm(id) {
         document.getElementById('formGestor').value = node.gestor || '';
         document.getElementById('formLider').value = node.lider || '';
         document.getElementById('formMembros').value = (node.membros || []).join('\n');
-
         var linksText = '';
         if (node.links) {
             for (var i = 0; i < node.links.length; i++) {
@@ -624,12 +589,8 @@ function updateParentSelect() {
     var select = document.getElementById('formParent');
     var currentVal = select.value;
     select.innerHTML = '<option value="">(Nenhuma - nivel raiz)</option>';
-
     var keys = Object.keys(nodes);
-    keys.sort(function(a, b) {
-        return (nodes[a].order || 0) - (nodes[b].order || 0);
-    });
-
+    keys.sort(function(a, b) { return (nodes[a].order || 0) - (nodes[b].order || 0); });
     for (var i = 0; i < keys.length; i++) {
         if (keys[i] === editingNodeId) continue;
         var opt = document.createElement('option');
@@ -637,7 +598,6 @@ function updateParentSelect() {
         opt.textContent = nodes[keys[i]].name;
         select.appendChild(opt);
     }
-
     select.value = currentVal;
 }
 
@@ -646,37 +606,22 @@ function updateParentSelect() {
 // ============================================================
 document.getElementById('nodeForm').addEventListener('submit', function(e) {
     e.preventDefault();
-
     var id = document.getElementById('formNodeId').value;
     var name = document.getElementById('formName').value.trim();
     var parent = document.getElementById('formParent').value;
     var color = document.getElementById('formColor').value;
     var gestor = document.getElementById('formGestor').value.trim();
     var lider = document.getElementById('formLider').value.trim();
-
     var membrosText = document.getElementById('formMembros').value;
     var membros = membrosText.split('\n').map(function(m) { return m.trim(); }).filter(function(m) { return m !== ''; });
-
     var linksText = document.getElementById('formLinks').value;
     var linksLines = linksText.split('\n').filter(function(l) { return l.trim() !== ''; });
     var links = linksLines.map(function(line) {
         var parts = line.split('|');
         return { label: (parts[0] || '').trim(), url: (parts[1] || '#').trim() };
     });
-
     var textColor = isLightColor(color) ? '#333' : '#fff';
-
-    var nodeData = {
-        name: name,
-        parent: parent,
-        color: color,
-        textColor: textColor,
-        gestor: gestor,
-        lider: lider,
-        membros: membros,
-        links: links,
-        order: 0
-    };
+    var nodeData = { name: name, parent: parent, color: color, textColor: textColor, gestor: gestor, lider: lider, membros: membros, links: links, order: 0 };
 
     if (id) {
         nodeData.order = nodes[id].order || 0;
@@ -686,7 +631,6 @@ document.getElementById('nodeForm').addEventListener('submit', function(e) {
         nodeData.order = Object.keys(nodes).length;
         nodesRef.child(newId).set(nodeData);
     }
-
     closeAllModals();
 });
 
@@ -696,7 +640,6 @@ document.getElementById('nodeForm').addEventListener('submit', function(e) {
 document.getElementById('btnDeleteNode').addEventListener('click', function() {
     if (!editingNodeId) return;
     var nodeName = nodes[editingNodeId] ? nodes[editingNodeId].name : editingNodeId;
-
     if (confirm('Excluir "' + nodeName + '"? Os filhos ficarao sem pai.')) {
         var children = getChildren(editingNodeId);
         for (var i = 0; i < children.length; i++) {
@@ -711,13 +654,8 @@ document.getElementById('btnDeleteNode').addEventListener('click', function() {
 // UTILIDADES
 // ============================================================
 function generateId(name) {
-    var id = name.toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-    if (nodes[id]) {
-        id = id + '-' + Date.now().toString(36);
-    }
+    var id = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    if (nodes[id]) id = id + '-' + Date.now().toString(36);
     return id;
 }
 
@@ -736,34 +674,13 @@ function closeAllModals() {
 // ============================================================
 // EVENT LISTENERS
 // ============================================================
-document.getElementById('btnAddNode').addEventListener('click', function() {
-    openEditForm(null);
-});
-
+document.getElementById('btnAddNode').addEventListener('click', function() { openEditForm(null); });
 document.getElementById('btnLogin').addEventListener('click', doLogin);
 document.getElementById('btnLoginLarge').addEventListener('click', doLogin);
 document.getElementById('btnLogout').addEventListener('click', doLogout);
-
-document.getElementById('btnCloseModal').addEventListener('click', function() {
-    document.getElementById('modalOverlay').classList.remove('active');
-});
-
-document.getElementById('btnCloseForm').addEventListener('click', function() {
-    document.getElementById('formOverlay').classList.remove('active');
-});
-
-document.getElementById('modalOverlay').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('active');
-});
-
-document.getElementById('formOverlay').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('active');
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeAllModals();
-});
-
-window.addEventListener('resize', function() {
-    if (Object.keys(nodes).length > 0) render();
-});
+document.getElementById('btnCloseModal').addEventListener('click', function() { document.getElementById('modalOverlay').classList.remove('active'); });
+document.getElementById('btnCloseForm').addEventListener('click', function() { document.getElementById('formOverlay').classList.remove('active'); });
+document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+document.getElementById('formOverlay').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAllModals(); });
+window.addEventListener('resize', function() { if (Object.keys(nodes).length > 0) render(); });
