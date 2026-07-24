@@ -41,10 +41,11 @@ function startProcessosListener() {
         if (val) {
             processos = val;
         } else {
-            processosRef.set(defaultProcessos);
-            processos = defaultProcessos;
+            processos = {};
         }
         renderProcessos();
+    }, function(error) {
+        console.error('Processos listener error:', error);
     });
 }
 
@@ -164,16 +165,23 @@ document.getElementById('processoForm').addEventListener('submit', function(e) {
     var data = { name: name, owner: owner, area: area, color: color, links: links, order: 0 };
 
     if (id) {
-        data.order = processos[id].order || 0;
-        processosRef.child(id).set(data);
+        data.order = (processos[id] && processos[id].order) || 0;
+        processosRef.child(id).set(data).then(function() {
+            document.getElementById('processoFormOverlay').classList.remove('active');
+        }).catch(function(err) {
+            alert('Erro ao salvar: ' + err.message);
+        });
     } else {
         var newId = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        if (!newId) newId = 'processo-' + Date.now().toString(36);
         if (processos[newId]) newId = newId + '-' + Date.now().toString(36);
         data.order = Object.keys(processos).length;
-        processosRef.child(newId).set(data);
+        processosRef.child(newId).set(data).then(function() {
+            document.getElementById('processoFormOverlay').classList.remove('active');
+        }).catch(function(err) {
+            alert('Erro ao salvar: ' + err.message);
+        });
     }
-
-    document.getElementById('processoFormOverlay').classList.remove('active');
 });
 
 // Excluir processo
