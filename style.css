@@ -6,39 +6,40 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #0f0f23;
+    background: #1e1e2f;
     color: #fff;
     min-height: 100vh;
 }
 
 header {
     text-align: center;
-    padding: 30px 20px 10px;
+    padding: 24px 20px 8px;
 }
 
 header h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
     color: #f5c842;
 }
 
 header .subtitle {
     color: #888;
-    font-size: 0.9rem;
-    margin-top: 4px;
+    font-size: 0.85rem;
+    margin-top: 2px;
 }
 
 main {
-    padding: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
+    padding: 16px 20px 40px;
 }
 
 /* Toolbar */
 .toolbar {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .btn {
@@ -76,80 +77,132 @@ main {
 /* Chart */
 .chart-container {
     position: relative;
-    min-height: 600px;
-    background: #1a1a2e;
+    background: #16172b;
     border-radius: 12px;
-    border: 1px solid #2c3e50;
-    overflow: visible;
-    padding: 50px 30px;
+    border: 1px solid #2a2d45;
+    overflow: auto;
+    padding: 40px 20px 60px;
+    max-width: 100%;
+}
+
+.chart-inner {
+    position: relative;
+    margin: 0 auto;
 }
 
 .lines-svg {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
     pointer-events: none;
     z-index: 1;
     overflow: visible;
 }
 
-.lines-svg path {
-    stroke: #4a6fa5;
-    stroke-width: 2;
-    fill: none;
-}
-
 .lines-svg line {
-    stroke: #4a6fa5;
+    stroke: #3d5a80;
     stroke-width: 2;
-}
-
-#nodesContainer {
-    position: relative;
-    z-index: 2;
+    stroke-linecap: round;
 }
 
 /* Node cards */
 .node-card {
     position: absolute;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-align: center;
+    border-radius: 10px;
     cursor: pointer;
-    white-space: nowrap;
-    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s;
     z-index: 2;
-    user-select: none;
+    min-width: 120px;
+    max-width: 200px;
+    padding: 10px 14px;
+    border: 2px solid transparent;
 }
 
 .node-card:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    transform: scale(1.04);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    border-color: rgba(255,255,255,0.2);
+}
+
+.node-card .node-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+}
+
+.node-card .node-role {
+    font-size: 0.72rem;
+    opacity: 0.85;
+    font-weight: 400;
+}
+
+.node-card .node-members {
+    font-size: 0.68rem;
+    opacity: 0.7;
+    margin-top: 6px;
+    line-height: 1.4;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 5px;
 }
 
 .node-card .edit-icon {
     position: absolute;
-    top: -8px;
-    right: -8px;
+    top: -6px;
+    right: -6px;
     background: #f5c842;
     color: #333;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     transition: opacity 0.2s;
+    pointer-events: auto;
 }
 
 .node-card:hover .edit-icon {
     opacity: 1;
+}
+
+/* Connector dot on node bottom */
+.node-card::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: #3d5a80;
+    border-radius: 50%;
+    border: 2px solid #16172b;
+}
+
+.node-card::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: #3d5a80;
+    border-radius: 50%;
+    border: 2px solid #16172b;
+}
+
+/* Root node has no top dot */
+.node-card.is-root::before {
+    display: none;
+}
+
+/* Leaf nodes have no bottom dot */
+.node-card.is-leaf::after {
+    display: none;
 }
 
 /* Modal */
@@ -169,15 +222,15 @@ main {
 }
 
 .modal {
-    background: #16213e;
+    background: #1e1e2f;
     border-radius: 12px;
-    padding: 30px;
+    padding: 28px;
     max-width: 520px;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
     position: relative;
-    border: 1px solid #2c3e50;
+    border: 1px solid #2a2d45;
 }
 
 .modal-form {
@@ -186,24 +239,24 @@ main {
 
 .modal-close {
     position: absolute;
-    top: 12px;
-    right: 16px;
+    top: 10px;
+    right: 14px;
     background: none;
     border: none;
     color: #fff;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     cursor: pointer;
 }
 
 .modal h2 {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     color: #f5c842;
     font-size: 1.3rem;
 }
 
 .modal h3 {
-    margin-top: 16px;
-    margin-bottom: 8px;
+    margin-top: 14px;
+    margin-bottom: 6px;
     color: #1abc9c;
     font-size: 0.95rem;
 }
@@ -215,7 +268,7 @@ main {
 
 .modal ul li {
     color: #ccc;
-    line-height: 1.8;
+    line-height: 1.7;
     font-size: 0.9rem;
 }
 
@@ -235,17 +288,17 @@ main {
 
 .section-divider {
     border: none;
-    border-top: 1px solid #2c3e50;
-    margin: 16px 0;
+    border-top: 1px solid #2a2d45;
+    margin: 14px 0;
 }
 
 /* Form styles */
 .modal-form label {
     display: block;
-    margin-top: 14px;
+    margin-top: 12px;
     margin-bottom: 4px;
     color: #aaa;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
 }
 
 .modal-form input[type="text"],
@@ -253,17 +306,17 @@ main {
 .modal-form select,
 .modal-form textarea {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #2c3e50;
+    padding: 9px 12px;
+    border: 1px solid #2a2d45;
     border-radius: 6px;
-    background: #0f0f23;
+    background: #0d0d1a;
     color: #fff;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-family: inherit;
 }
 
 .modal-form input[type="color"] {
-    height: 40px;
+    height: 38px;
     padding: 4px;
     cursor: pointer;
 }
@@ -273,7 +326,7 @@ main {
 }
 
 .form-actions {
-    margin-top: 24px;
+    margin-top: 20px;
     display: flex;
     gap: 12px;
 }
@@ -281,11 +334,14 @@ main {
 /* Responsive */
 @media (max-width: 768px) {
     .chart-container {
-        padding: 20px;
+        padding: 20px 10px;
     }
-
     .node-card {
+        min-width: 90px;
+        max-width: 140px;
+        padding: 8px 10px;
+    }
+    .node-card .node-title {
         font-size: 0.75rem;
-        padding: 8px 12px;
     }
 }
