@@ -204,7 +204,8 @@ function renderProcessos() {
         }
 
         div.innerHTML = html;
-        div.addEventListener('click', onProcNodeClick);
+        div.addEventListener('mousedown', onProcDragStart);
+        div.addEventListener('touchstart', onProcDragStart, { passive: false });
         container.appendChild(div);
     }
 
@@ -256,8 +257,164 @@ function onProcNodeClick(e) {
         renderProcessos();
         return;
     }
-    // Ignorar cliques em links
     if (target.tagName === 'A') return;
+}
+
+// ============================================================
+// DRAG AND DROP - Processos
+// ============================================================
+var procDragId = null;
+var procDragEl = null;
+var procDragStartX = 0;
+var procDragStartY = 0;
+var procDragOrigLeft = 0;
+var procDragOrigTop = 0;
+var procIsDragging = false;
+
+function onProcDragStart(e) {
+    var target = e.target;
+    if (target.classList.contains('proc-edit')) {
+        openProcessoForm(target.getAttribute('data-id'));
+        return;
+    }
+    if (target.classList.contains('proc-toggle')) {
+        var toggleId = target.getAttribute('data-toggle-id');
+        if (collapsedProcessos[toggleId]) {
+            delete collapsedProcessos[toggleId];
+        } else {
+            collapsedProcessos[toggleId] = true;
+        }
+        renderProcessos();
+        return;
+    }
+    if (target.tagName === 'A') return;
+
+    var el = e.currentTarget;
+    var id = el.getAttribute('data-id');
+    if (!id) return;
+
+    e.preventDefault();
+    procDragId = id;
+    procDragEl = el;
+    procIsDragging = false;
+
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    procDragStartX = clientX;
+    procDragStartY = clientY;
+    procDragOrigLeft = parseInt(el.style.left) || 0;
+    procDragOrigTop = parseInt(el.style.top) || 0;
+
+    document.addEventListener('mousemove', onProcDragMove);
+    document.addEventListener('mouseup', onProcDragEnd);
+    document.addEventListener('touchmove', onProcDragMove, { passive: false });
+    document.addEventListener('touchend', onProcDragEnd);
+}
+
+function onProcDragMove(e) {
+    if (!procDragEl) return;
+    e.preventDefault();
+
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    var dx = clientX - procDragStartX;
+    var dy = clientY - procDragStartY;
+
+    if (!procIsDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
+    procIsDragging = true;
+
+    procDragEl.style.left = (procDragOrigLeft + dx) + 'px';
+    procDragEl.style.top = (procDragOrigTop + dy) + 'px';
+    procDragEl.style.zIndex = '100';
+    procDragEl.style.opacity = '0.8';
+    procDragEl.style.transition = 'none';
+
+    // Highlight
+    procHighlightTarget(clientX, clientY);
+}
+
+function onProcDragEnd(e) {
+    document.removeEventListener('mousemove', onProcDragMove);
+    document.removeEventListener('mouseup', onProcDragEnd);
+    document.removeEventListener('touchmove', onProcDragMove);
+    document.removeEventListener('touchend', onProcDragEnd);
+
+    if (!procDragEl || !procDragId) { procResetDrag(); return; }
+
+    if (!procIsDragging) {
+        procResetDrag();
+        return;
+    }
+
+    var clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    var clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    var targetId = procFindDropTarget(clientX, clientY);
+
+    if (targetId && targetId !== procDragId) {
+        var dragProc = processos[procDragId];
+        var targetProc = processos[targetId];
+
+        if (dragProc.parent === targetProc.parent) {
+            // Irmaos - trocar order
+            var tempOrder = dragProc.order;
+            processosRef.child(procDragId).child('order').set(targetProc.order);
+            processosRef.child(targetId).child('order').set(tempOrder);
+        } else {
+            // Mover para debaixo do target
+            processosRef.child(procDragId).child('parent').set(targetId);
+        }
+    }
+
+    procResetDrag();
+    renderProcessos();
+}
+
+function procResetDrag() {
+    if (procDragEl) {
+        procDragEl.style.zIndex = '';
+        procDragEl.style.opacity = '';
+        procDragEl.style.transition = '';
+    }
+    procDragId = null;
+    procDragEl = null;
+    procIsDragging = false;
+    procClearHighlights();
+}
+
+function procFindDropTarget(clientX, clientY) {
+    var container = document.getElementById('processosContainer');
+    var cards = container.querySelectorAll('.proc-node');
+    for (var i = 0; i < cards.length; i++) {
+        if (cards[i] === procDragEl) continue;
+        var rect = cards[i].getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right &&
+            clientY >= rect.top && clientY <= rect.bottom) {
+            return cards[i].getAttribute('data-id');
+        }
+    }
+    return null;
+}
+
+function procHighlightTarget(clientX, clientY) {
+    procClearHighlights();
+    var targetId = procFindDropTarget(clientX, clientY);
+    if (targetId) {
+        var container = document.getElementById('processosContainer');
+        var cards = container.querySelectorAll('.proc-node');
+        for (var i = 0; i < cards.length; i++) {
+            if (cards[i].getAttribute('data-id') === targetId) {
+                cards[i].classList.add('drop-target');
+                break;
+            }
+        }
+    }
+}
+
+function procClearHighlights() {
+    var cards = document.querySelectorAll('.proc-node.drop-target');
+    for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.remove('drop-target');
+    }
 }
 
 // ============================================================

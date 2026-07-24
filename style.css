@@ -320,6 +320,12 @@ body {
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 
+.proc-node.drop-target {
+    border-color: #f5c842 !important;
+    box-shadow: 0 0 16px rgba(245, 200, 66, 0.5);
+    transform: scale(1.05);
+}
+
 .proc-node .proc-title {
     font-weight: 700;
     font-size: 0.85rem;
