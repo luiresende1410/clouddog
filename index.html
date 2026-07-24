@@ -58,6 +58,7 @@
             <div class="page" id="pageOrganograma">
                 <div class="toolbar">
                     <button id="btnAddNode" class="btn btn-primary">+ Nova Area</button>
+                    <button id="btnPdfOrganograma" class="btn btn-secondary">&#128196; Gerar PDF</button>
                 </div>
                 <div class="chart-container" id="chartContainer">
                     <div class="chart-inner" id="chartInner">
@@ -71,6 +72,7 @@
             <div class="page" id="pageProcessos" style="display:none;">
                 <div class="toolbar">
                     <button id="btnAddProcesso" class="btn btn-primary">+ Novo Processo</button>
+                    <button id="btnPdfProcessos" class="btn btn-secondary">&#128196; Gerar PDF</button>
                 </div>
                 <div class="chart-container" id="processosChartContainer">
                     <div class="chart-inner" id="processosInner">
@@ -151,6 +153,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="app.js"></script>
     <script src="processos.js"></script>
 </body>

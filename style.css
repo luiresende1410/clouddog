@@ -205,6 +205,8 @@ body {
 .btn:hover { transform: translateY(-1px); }
 .btn-primary { background: #2980b9; color: #fff; }
 .btn-primary:hover { background: #3498db; }
+.btn-secondary { background: #444; color: #fff; }
+.btn-secondary:hover { background: #666; }
 .btn-danger { background: #e74c3c; color: #fff; }
 .btn-danger:hover { background: #c0392b; }
 

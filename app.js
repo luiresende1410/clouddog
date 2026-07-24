@@ -757,3 +757,48 @@ function switchPage(page) {
 document.getElementById('sidebarToggle').addEventListener('click', function() {
     document.getElementById('sidebar').classList.toggle('open');
 });
+
+// ============================================================
+// GERAR PDF
+// ============================================================
+function generatePDF(elementId, filename) {
+    var element = document.getElementById(elementId);
+    if (!element) return;
+
+    // Temporariamente expandir o container pra capturar tudo
+    var originalOverflow = element.style.overflow;
+    element.style.overflow = 'visible';
+
+    html2canvas(element, {
+        backgroundColor: '#12132a',
+        scale: 2,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        width: element.scrollWidth,
+        height: element.scrollHeight
+    }).then(function(canvas) {
+        element.style.overflow = originalOverflow;
+
+        var imgData = canvas.toDataURL('image/png');
+        var pdf = new jspdf.jsPDF({
+            orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+            unit: 'px',
+            format: [canvas.width, canvas.height]
+        });
+
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save(filename);
+    }).catch(function(err) {
+        element.style.overflow = originalOverflow;
+        alert('Erro ao gerar PDF: ' + err.message);
+    });
+}
+
+document.getElementById('btnPdfOrganograma').addEventListener('click', function() {
+    generatePDF('chartInner', 'organograma-clouddog.pdf');
+});
+
+document.getElementById('btnPdfProcessos').addEventListener('click', function() {
+    generatePDF('processosInner', 'mapa-processos-clouddog.pdf');
+});
