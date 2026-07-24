@@ -277,46 +277,14 @@ function getChildren(parentId) {
     return children;
 }
 
-function getTreeDepth(nodeId) {
+function getSubtreeLeafCount(nodeId) {
     var children = getChildren(nodeId);
-    if (children.length === 0) return 0;
-    var maxDepth = 0;
+    if (children.length === 0) return 1;
+    var count = 0;
     for (var i = 0; i < children.length; i++) {
-        var d = getTreeDepth(children[i]);
-        if (d > maxDepth) maxDepth = d;
+        count += getSubtreeLeafCount(children[i]);
     }
-    return maxDepth + 1;
-}
-
-function getSubtreeWidth(nodeId) {
-    var children = getChildren(nodeId);
-    if (children.length === 0) return 160;
-    var total = 0;
-    for (var i = 0; i < children.length; i++) {
-        total += getSubtreeWidth(children[i]);
-    }
-    return Math.max(160, total);
-}
-
-function calculatePositions(nodeId, x, y, positions) {
-    positions[nodeId] = { x: x, y: y };
-    var children = getChildren(nodeId);
-    if (children.length === 0) return;
-
-    var totalWidth = 0;
-    var widths = [];
-    for (var i = 0; i < children.length; i++) {
-        var w = getSubtreeWidth(children[i]);
-        widths.push(w);
-        totalWidth += w;
-    }
-
-    var startX = x - totalWidth / 2;
-    for (var i = 0; i < children.length; i++) {
-        var childX = startX + widths[i] / 2;
-        calculatePositions(children[i], childX, y + 100, positions);
-        startX += widths[i];
-    }
+    return count;
 }
 
 // ============================================================
@@ -325,6 +293,7 @@ function calculatePositions(nodeId, x, y, positions) {
 function render() {
     var container = document.getElementById('nodesContainer');
     var svg = document.getElementById('linesSvg');
+    var chartContainer = document.getElementById('chartContainer');
 
     container.innerHTML = '';
 
@@ -337,50 +306,78 @@ function render() {
         }
     }
 
-    // Calcular posicoes
-    var positions = {};
-    var totalRootWidth = 0;
-    var rootWidths = [];
-    for (var i = 0; i < roots.length; i++) {
-        var w = getSubtreeWidth(roots[i]);
-        rootWidths.push(w);
-        totalRootWidth += w;
+    if (roots.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">Nenhuma area cadastrada. Clique em "+ Nova Area" para comecar.</p>';
+        return;
     }
 
-    var chartWidth = Math.max(totalRootWidth + 100, 900);
-    var startX = chartWidth / 2;
+    // Usar largura disponivel do container
+    var availableWidth = chartContainer.offsetWidth - 60;
+    if (availableWidth < 600) availableWidth = 600;
 
-    if (roots.length === 1) {
-        calculatePositions(roots[0], startX, 30, positions);
-    } else {
-        var rx = (chartWidth - totalRootWidth) / 2;
-        for (var i = 0; i < roots.length; i++) {
-            var cx = rx + rootWidths[i] / 2;
-            calculatePositions(roots[i], cx, 30, positions);
-            rx += rootWidths[i];
+    var LEVEL_HEIGHT = 120;
+    var NODE_MIN_WIDTH = 180;
+
+    // Calcular posicoes baseado na largura disponivel
+    var positions = {};
+
+    function calculatePositions(nodeId, leftBound, rightBound, y) {
+        var centerX = (leftBound + rightBound) / 2;
+        positions[nodeId] = { x: centerX, y: y };
+
+        var children = getChildren(nodeId);
+        if (children.length === 0) return;
+
+        // Distribuir filhos proporcionalmente ao numero de folhas
+        var totalLeaves = 0;
+        var childLeaves = [];
+        for (var i = 0; i < children.length; i++) {
+            var leaves = getSubtreeLeafCount(children[i]);
+            childLeaves.push(leaves);
+            totalLeaves += leaves;
+        }
+
+        var sectionWidth = rightBound - leftBound;
+        var currentLeft = leftBound;
+
+        for (var i = 0; i < children.length; i++) {
+            var childWidth = (childLeaves[i] / totalLeaves) * sectionWidth;
+            calculatePositions(children[i], currentLeft, currentLeft + childWidth, y + LEVEL_HEIGHT);
+            currentLeft += childWidth;
         }
     }
 
-    // Determinar tamanho do container
-    var maxX = 0, maxY = 0;
-    var posKeys = Object.keys(positions);
-    for (var i = 0; i < posKeys.length; i++) {
-        var p = positions[posKeys[i]];
-        if (p.x > maxX) maxX = p.x;
-        if (p.y > maxY) maxY = p.y;
+    // Posicionar cada raiz
+    if (roots.length === 1) {
+        calculatePositions(roots[0], 0, availableWidth, 30);
+    } else {
+        var sectionPerRoot = availableWidth / roots.length;
+        for (var i = 0; i < roots.length; i++) {
+            calculatePositions(roots[i], i * sectionPerRoot, (i + 1) * sectionPerRoot, 30);
+        }
     }
 
-    container.style.width = (maxX + 200) + 'px';
-    container.style.height = (maxY + 80) + 'px';
-    svg.style.width = (maxX + 200) + 'px';
-    svg.style.height = (maxY + 80) + 'px';
-    svg.setAttribute('width', maxX + 200);
-    svg.setAttribute('height', maxY + 80);
+    // Determinar altura necessaria
+    var maxY = 0;
+    var posKeys = Object.keys(positions);
+    for (var i = 0; i < posKeys.length; i++) {
+        if (positions[posKeys[i]].y > maxY) maxY = positions[posKeys[i]].y;
+    }
 
-    // Limpar linhas SVG (manter defs)
-    var existingLines = svg.querySelectorAll('line');
-    for (var i = 0; i < existingLines.length; i++) {
-        svg.removeChild(existingLines[i]);
+    var totalHeight = maxY + 80;
+    container.style.width = availableWidth + 'px';
+    container.style.height = totalHeight + 'px';
+    container.style.margin = '0 auto';
+    svg.style.width = availableWidth + 'px';
+    svg.style.height = totalHeight + 'px';
+    svg.setAttribute('width', availableWidth);
+    svg.setAttribute('height', totalHeight);
+    chartContainer.style.minHeight = (totalHeight + 100) + 'px';
+
+    // Limpar paths SVG (manter defs)
+    var existingPaths = svg.querySelectorAll('path');
+    for (var i = 0; i < existingPaths.length; i++) {
+        svg.removeChild(existingPaths[i]);
     }
 
     // Renderizar nos
@@ -394,8 +391,9 @@ function render() {
         div.className = 'node-card';
         div.style.background = node.color || '#2980b9';
         div.style.color = node.textColor || '#fff';
-        div.style.left = (pos.x - 60) + 'px';
+        div.style.left = pos.x + 'px';
         div.style.top = pos.y + 'px';
+        div.style.transform = 'translateX(-50%)';
         div.setAttribute('data-id', id);
         div.innerHTML = node.name + '<span class="edit-icon">&#9998;</span>';
 
@@ -405,7 +403,7 @@ function render() {
         container.appendChild(div);
     }
 
-    // Desenhar linhas
+    // Desenhar linhas curvas (paths)
     var cardElements = container.querySelectorAll('.node-card');
     var cardMap = {};
     for (var i = 0; i < cardElements.length; i++) {
@@ -427,12 +425,13 @@ function render() {
         var x2 = childEl.offsetLeft + childEl.offsetWidth / 2;
         var y2 = childEl.offsetTop;
 
-        var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", x1);
-        line.setAttribute("y1", y1);
-        line.setAttribute("x2", x2);
-        line.setAttribute("y2", y2);
-        svg.appendChild(line);
+        // Curva bezier vertical
+        var midY = y1 + (y2 - y1) * 0.5;
+        var d = 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2;
+
+        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        svg.appendChild(path);
     }
 
     updateParentSelect();
@@ -693,4 +692,11 @@ document.getElementById('formOverlay').addEventListener('click', function(e) {
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeAllModals();
+});
+
+// Redesenhar ao redimensionar a janela
+window.addEventListener('resize', function() {
+    if (Object.keys(nodes).length > 0) {
+        render();
+    }
 });

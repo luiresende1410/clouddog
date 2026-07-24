@@ -76,12 +76,12 @@ main {
 /* Chart */
 .chart-container {
     position: relative;
-    min-height: 500px;
+    min-height: 600px;
     background: #1a1a2e;
     border-radius: 12px;
     border: 1px solid #2c3e50;
-    overflow: auto;
-    padding: 40px;
+    overflow: visible;
+    padding: 50px 30px;
 }
 
 .lines-svg {
@@ -92,11 +92,13 @@ main {
     height: 100%;
     pointer-events: none;
     z-index: 1;
+    overflow: visible;
 }
 
-.lines-svg line {
+.lines-svg path {
     stroke: #4a6fa5;
     stroke-width: 2;
+    fill: none;
     marker-end: url(#arrowhead);
 }
 
