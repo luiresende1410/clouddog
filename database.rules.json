@@ -3,6 +3,10 @@
     "nodes": {
       ".read": "auth != null && auth.token.email.endsWith('@clouddog.com.br')",
       ".write": "auth != null && auth.token.email.endsWith('@clouddog.com.br')"
+    },
+    "processos": {
+      ".read": "auth != null && auth.token.email.endsWith('@clouddog.com.br')",
+      ".write": "auth != null && auth.token.email.endsWith('@clouddog.com.br')"
     }
   }
 }

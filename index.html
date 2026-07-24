@@ -3,54 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CloudDog - Mapa Organizacional</title>
+    <title>CloudDog - Portal Administrativo</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <div class="header-row">
-            <div>
-                <h1>&#128054; CloudDog</h1>
-                <p class="subtitle">Mapa Organizacional Interativo</p>
+    <!-- Login Wall -->
+    <div class="login-wall" id="loginWall">
+        <h1>&#128054; CloudDog</h1>
+        <h2>&#128274; Acesso Restrito</h2>
+        <p>Apenas colaboradores CloudDog podem acessar.</p>
+        <button id="btnLoginLarge" class="btn-login-large">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+            Entrar com Google (@clouddog.com.br)
+        </button>
+        <p class="error-msg" id="loginError" style="display:none;"></p>
+    </div>
+
+    <!-- App (hidden until login) -->
+    <div id="appShell" class="app-shell" style="display:none;">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>&#128054; CloudDog</h2>
             </div>
-            <div id="authArea" class="auth-area">
-                <button id="btnLogin" class="btn btn-login" style="display:none;">Entrar com Google</button>
-                <div id="userInfo" class="user-info" style="display:none;">
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="organograma">
+                    <span class="nav-icon">&#128101;</span>
+                    Organograma
+                </a>
+                <a href="#" class="nav-item" data-page="processos">
+                    <span class="nav-icon">&#128196;</span>
+                    Mapa de Processos
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
                     <img id="userPhoto" class="user-photo" alt="">
                     <span id="userName"></span>
-                    <button id="btnLogout" class="btn btn-small">Sair</button>
+                </div>
+                <button id="btnLogout" class="btn btn-small">Sair</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header class="top-bar">
+                <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+                <h1 id="pageTitle">Organograma Organizacional</h1>
+                <button id="btnLogin" class="btn btn-login" style="display:none;">Entrar</button>
+            </header>
+
+            <!-- PAGE: Organograma -->
+            <div class="page" id="pageOrganograma">
+                <div class="toolbar">
+                    <button id="btnAddNode" class="btn btn-primary">+ Nova Area</button>
+                </div>
+                <div class="chart-container" id="chartContainer">
+                    <div class="chart-inner" id="chartInner">
+                        <svg id="linesSvg" class="lines-svg"></svg>
+                        <div id="nodesContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE: Mapa de Processos -->
+            <div class="page" id="pageProcessos" style="display:none;">
+                <div class="toolbar">
+                    <button id="btnAddProcesso" class="btn btn-primary">+ Novo Processo</button>
+                </div>
+                <div class="processos-grid" id="processosGrid">
+                    <!-- Preenchido via JS -->
                 </div>
             </div>
         </div>
-    </header>
+    </div>
 
-    <main>
-        <!-- Login Wall -->
-        <div class="login-wall" id="loginWall">
-            <h2>&#128274; Acesso Restrito</h2>
-            <p>Apenas colaboradores CloudDog podem acessar este sistema.</p>
-            <button id="btnLoginLarge" class="btn-login-large">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-                Entrar com Google (@clouddog.com.br)
-            </button>
-            <p class="error-msg" id="loginError" style="display:none;"></p>
-        </div>
-
-        <!-- App Content (hidden until login) -->
-        <div id="appContent" style="display:none;">
-            <div class="toolbar">
-                <button id="btnAddNode" class="btn btn-primary">+ Nova Area</button>
-            </div>
-            <div class="chart-container" id="chartContainer">
-                <div class="chart-inner" id="chartInner">
-                    <svg id="linesSvg" class="lines-svg"></svg>
-                    <div id="nodesContainer"></div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal de Detalhes / Edicao -->
+    <!-- Modal de Detalhes / Edicao (Organograma) -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modalContent">
             <button class="modal-close" id="btnCloseModal">&#215;</button>
@@ -58,40 +87,57 @@
         </div>
     </div>
 
-    <!-- Modal de Adicionar/Editar Area -->
+    <!-- Modal de Adicionar/Editar Area (Organograma) -->
     <div class="modal-overlay" id="formOverlay">
         <div class="modal modal-form">
             <button class="modal-close" id="btnCloseForm">&#215;</button>
             <h2 id="formTitle">Nova Area</h2>
             <form id="nodeForm">
                 <input type="hidden" id="formNodeId">
-
                 <label for="formName">Nome da Area *</label>
                 <input type="text" id="formName" required placeholder="Ex: SOC, FinOps...">
-
                 <label for="formParent">Area Pai</label>
                 <select id="formParent">
                     <option value="">(Nenhuma - nivel raiz)</option>
                 </select>
-
                 <label for="formColor">Cor</label>
                 <input type="color" id="formColor" value="#2980b9">
-
                 <label for="formGestor">Gestor</label>
                 <input type="text" id="formGestor" placeholder="Nome do Gestor">
-
                 <label for="formLider">Lider</label>
                 <input type="text" id="formLider" placeholder="Nome do Lider">
-
                 <label>Membros (um por linha)</label>
                 <textarea id="formMembros" rows="4" placeholder="Membro 1&#10;Membro 2&#10;Membro 3"></textarea>
-
                 <label>Links de Processos (um por linha: Nome | URL)</label>
                 <textarea id="formLinks" rows="4" placeholder="Runbook SOC | https://link.com&#10;Dashboard | https://outro.com"></textarea>
-
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Salvar</button>
                     <button type="button" class="btn btn-danger" id="btnDeleteNode" style="display:none;">Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Adicionar/Editar Processo -->
+    <div class="modal-overlay" id="processoFormOverlay">
+        <div class="modal modal-form">
+            <button class="modal-close" id="btnCloseProcessoForm">&#215;</button>
+            <h2 id="processoFormTitle">Novo Processo</h2>
+            <form id="processoForm">
+                <input type="hidden" id="processoFormId">
+                <label for="processoFormName">Nome do Processo *</label>
+                <input type="text" id="processoFormName" required placeholder="Ex: Onboarding, Gestao de Incidentes...">
+                <label for="processoFormOwner">Owner (Responsavel)</label>
+                <input type="text" id="processoFormOwner" placeholder="Nome do responsavel">
+                <label for="processoFormArea">Area Relacionada</label>
+                <input type="text" id="processoFormArea" placeholder="Ex: CloudOps, Cyber Security...">
+                <label for="processoFormColor">Cor</label>
+                <input type="color" id="processoFormColor" value="#3498db">
+                <label>Links (um por linha: Nome | URL)</label>
+                <textarea id="processoFormLinks" rows="5" placeholder="Documento do Processo | https://link.com&#10;Fluxograma | https://outro.com"></textarea>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" class="btn btn-danger" id="btnDeleteProcesso" style="display:none;">Excluir</button>
                 </div>
             </form>
         </div>
@@ -101,5 +147,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="app.js"></script>
+    <script src="processos.js"></script>
 </body>
 </html>

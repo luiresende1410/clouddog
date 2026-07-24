@@ -67,14 +67,15 @@ function showApp(user) {
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('userName').textContent = user.displayName || user.email;
     document.getElementById('userPhoto').src = user.photoURL || '';
-    document.getElementById('appContent').style.display = 'block';
+    document.getElementById('appShell').style.display = 'flex';
     document.getElementById('loginWall').style.display = 'none';
+    startProcessosListener();
 }
 
 function showLoginWall(errorMsg) {
     document.getElementById('btnLogin').style.display = 'inline-block';
     document.getElementById('userInfo').style.display = 'none';
-    document.getElementById('appContent').style.display = 'none';
+    document.getElementById('appShell').style.display = 'none';
     document.getElementById('loginWall').style.display = 'flex';
     var errorEl = document.getElementById('loginError');
     if (errorMsg) {
@@ -83,6 +84,7 @@ function showLoginWall(errorMsg) {
     } else {
         errorEl.style.display = 'none';
     }
+    stopProcessosListener();
 }
 
 function doLogin() {
@@ -715,3 +717,43 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) { 
 document.getElementById('formOverlay').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAllModals(); });
 window.addEventListener('resize', function() { if (Object.keys(nodes).length > 0) render(); });
+
+// ============================================================
+// NAVEGACAO SIDEBAR
+// ============================================================
+var navItems = document.querySelectorAll('.nav-item');
+for (var i = 0; i < navItems.length; i++) {
+    navItems[i].addEventListener('click', function(e) {
+        e.preventDefault();
+        var page = this.getAttribute('data-page');
+        switchPage(page);
+    });
+}
+
+function switchPage(page) {
+    // Update nav active state
+    var items = document.querySelectorAll('.nav-item');
+    for (var i = 0; i < items.length; i++) {
+        items[i].classList.remove('active');
+        if (items[i].getAttribute('data-page') === page) {
+            items[i].classList.add('active');
+        }
+    }
+
+    // Show/hide pages
+    document.getElementById('pageOrganograma').style.display = page === 'organograma' ? 'block' : 'none';
+    document.getElementById('pageProcessos').style.display = page === 'processos' ? 'block' : 'none';
+
+    // Update title
+    var titles = { organograma: 'Organograma Organizacional', processos: 'Mapa de Processos' };
+    document.getElementById('pageTitle').textContent = titles[page] || '';
+
+    // Re-render if needed
+    if (page === 'organograma' && Object.keys(nodes).length > 0) render();
+    if (page === 'processos') renderProcessos();
+}
+
+// Sidebar toggle (mobile)
+document.getElementById('sidebarToggle').addEventListener('click', function() {
+    document.getElementById('sidebar').classList.toggle('open');
+});
