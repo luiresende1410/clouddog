@@ -759,6 +759,31 @@ document.getElementById('sidebarToggle').addEventListener('click', function() {
 });
 
 // ============================================================
+// DARK/LIGHT MODE
+// ============================================================
+var themeBtn = document.getElementById('btnThemeToggle');
+
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.body.classList.add('light-mode');
+        themeBtn.innerHTML = '&#9790;'; // moon
+    } else {
+        document.body.classList.remove('light-mode');
+        themeBtn.innerHTML = '&#9788;'; // sun
+    }
+    localStorage.setItem('clouddog-theme', theme);
+}
+
+// Load saved theme
+var savedTheme = localStorage.getItem('clouddog-theme') || 'dark';
+applyTheme(savedTheme);
+
+themeBtn.addEventListener('click', function() {
+    var current = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+});
+
+// ============================================================
 // GERAR PDF
 // ============================================================
 function generatePDF(elementId, filename) {
