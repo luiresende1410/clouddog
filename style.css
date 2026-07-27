@@ -404,15 +404,23 @@ body {
     transition: background 0.2s;
 }
 
+.proc-node .proc-toggle.proc-toggle-h {
+    bottom: auto;
+    left: auto;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
 .proc-node .proc-toggle:hover { background: #f5c842; color: #333; }
 .proc-node.is-collapsed .proc-toggle { background: #e67e22; }
 
 .proc-node::before {
     content: '';
     position: absolute;
-    top: -5px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 50%;
+    left: -5px;
+    transform: translateY(-50%);
     width: 8px;
     height: 8px;
     background: #3d5a80;

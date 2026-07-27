@@ -9,8 +9,8 @@ var collapsedProcessos = {};
 
 var PROC_NODE_W = 180;
 var PROC_NODE_H_BASE = 60;
-var PROC_H_GAP = 30;
-var PROC_V_GAP = 60;
+var PROC_H_GAP = 50;  // gap horizontal entre pai e filhos
+var PROC_V_GAP = 20;  // gap vertical entre irmaos
 
 function startProcessosListener() {
     if (processosListener) return;
@@ -49,15 +49,15 @@ function getProcChildren(parentId) {
     return children;
 }
 
-function procSubtreeWidth(id) {
+function procSubtreeHeight(id) {
     var children = getProcChildren(id);
-    if (children.length === 0 || collapsedProcessos[id]) return PROC_NODE_W;
+    if (children.length === 0 || collapsedProcessos[id]) return estimateProcHeight(id);
     var total = 0;
     for (var i = 0; i < children.length; i++) {
-        if (i > 0) total += PROC_H_GAP;
-        total += procSubtreeWidth(children[i]);
+        if (i > 0) total += PROC_V_GAP;
+        total += procSubtreeHeight(children[i]);
     }
-    return Math.max(PROC_NODE_W, total);
+    return Math.max(estimateProcHeight(id), total);
 }
 
 function estimateProcHeight(id) {
@@ -70,7 +70,7 @@ function estimateProcHeight(id) {
 }
 
 // ============================================================
-// RENDER PROCESSOS (arvore visual)
+// RENDER PROCESSOS (arvore horizontal: esquerda -> direita)
 // ============================================================
 function renderProcessos() {
     var container = document.getElementById('processosContainer');
@@ -95,13 +95,14 @@ function renderProcessos() {
         }
     }
     if (roots.length === 0) {
-        // Fallback: mostrar todos como raiz
         roots = keys.slice();
     }
+    roots.sort(function(a, b) { return (processos[a].order || 0) - (processos[b].order || 0); });
 
     var positions = {};
     var nodeHeights = {};
 
+    // Layout horizontal: x cresce pra direita, y empilha filhos verticalmente
     function layout(id, x, y) {
         var h = estimateProcHeight(id);
         nodeHeights[id] = h;
@@ -109,35 +110,40 @@ function renderProcessos() {
 
         if (children.length === 0 || collapsedProcessos[id]) {
             positions[id] = { x: x, y: y, w: PROC_NODE_W, h: h };
-            return PROC_NODE_W;
+            return h;
         }
 
-        var totalChildW = 0;
-        var childWidths = [];
+        // Calcular altura total dos filhos
+        var totalChildH = 0;
+        var childHeights = [];
         for (var i = 0; i < children.length; i++) {
-            var cw = procSubtreeWidth(children[i]);
-            childWidths.push(cw);
-            totalChildW += cw;
-            if (i > 0) totalChildW += PROC_H_GAP;
+            var ch = procSubtreeHeight(children[i]);
+            childHeights.push(ch);
+            totalChildH += ch;
+            if (i > 0) totalChildH += PROC_V_GAP;
         }
 
-        var nodeX = x + totalChildW / 2 - PROC_NODE_W / 2;
-        positions[id] = { x: nodeX, y: y, w: PROC_NODE_W, h: h };
+        // Posicionar o pai centrado verticalmente em relacao aos filhos
+        var parentY = y + totalChildH / 2 - h / 2;
+        positions[id] = { x: x, y: parentY, w: PROC_NODE_W, h: h };
 
-        var childY = y + h + PROC_V_GAP;
-        var cx = x;
+        // Posicionar filhos a direita
+        var childX = x + PROC_NODE_W + PROC_H_GAP;
+        var cy = y;
         for (var i = 0; i < children.length; i++) {
-            layout(children[i], cx, childY);
-            cx += childWidths[i] + PROC_H_GAP;
+            layout(children[i], childX, cy);
+            cy += childHeights[i] + PROC_V_GAP;
         }
-        return totalChildW;
+
+        return totalChildH;
     }
 
-    var startX = 20;
+    // Layout raizes empilhadas verticalmente
+    var startY = 20;
     for (var i = 0; i < roots.length; i++) {
-        var rw = procSubtreeWidth(roots[i]);
-        layout(roots[i], startX, 20);
-        startX += rw + PROC_H_GAP * 2;
+        var rh = procSubtreeHeight(roots[i]);
+        layout(roots[i], 20, startY);
+        startY += rh + PROC_V_GAP * 2;
     }
 
     // Dimensoes
@@ -198,9 +204,10 @@ function renderProcessos() {
             html += '</div>';
         }
 
+        // Toggle a direita do no (horizontal)
         if (hasChildren) {
-            var toggleLabel = isCollapsed ? '+' : '\u2212';
-            html += '<span class="proc-toggle" data-toggle-id="' + id + '">' + toggleLabel + '</span>';
+            var toggleLabel = isCollapsed ? '&#9654;' : '&#9664;';
+            html += '<span class="proc-toggle proc-toggle-h" data-toggle-id="' + id + '">' + toggleLabel + '</span>';
         }
 
         div.innerHTML = html;
@@ -209,7 +216,7 @@ function renderProcessos() {
         container.appendChild(div);
     }
 
-    // Conectores
+    // Conectores horizontais (pai -> filhos)
     for (var i = 0; i < keys.length; i++) {
         var id = keys[i];
         var proc = processos[id];
@@ -219,16 +226,18 @@ function renderProcessos() {
         var childPos = positions[id];
         if (!parentPos || !childPos) continue;
 
-        var parentH = nodeHeights[proc.parent] || PROC_NODE_H_BASE;
-        var x1 = parentPos.x + parentPos.w / 2;
-        var y1 = parentPos.y + parentH;
-        var x2 = childPos.x + childPos.w / 2;
-        var y2 = childPos.y;
-        var midY = y1 + (y2 - y1) / 2;
+        // Saida: centro-direita do pai
+        var x1 = parentPos.x + parentPos.w;
+        var y1 = parentPos.y + (nodeHeights[proc.parent] || PROC_NODE_H_BASE) / 2;
+        // Entrada: centro-esquerda do filho
+        var x2 = childPos.x;
+        var y2 = childPos.y + (nodeHeights[id] || PROC_NODE_H_BASE) / 2;
+        // Ponto medio horizontal
+        var midX = x1 + (x2 - x1) / 2;
 
-        procAppendLine(svg, x1, y1, x1, midY);
-        procAppendLine(svg, x1, midY, x2, midY);
-        procAppendLine(svg, x2, midY, x2, y2);
+        procAppendLine(svg, x1, y1, midX, y1);
+        procAppendLine(svg, midX, y1, midX, y2);
+        procAppendLine(svg, midX, y2, x2, y2);
     }
 }
 
